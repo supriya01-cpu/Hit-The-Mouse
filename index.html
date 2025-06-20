@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🐭 Hit the Mouse Game</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #eaaa32;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 40px auto;
+      background: #d59193;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0px 0px 15px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    .scoreboard {
+      display: flex;
+      justify-content: space-around;
+      font-size: 20px;
+      margin-bottom: 20px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      gap: 15px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .hole {
+      width: 100px;
+      height: 100px;
+      background-color: #269bcd;
+      border-radius: 50%;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 60px;
+      transition: transform 0.2s;
+    }
+
+    .mouse {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 60px;
+      cursor: pointer;
+      animation: pop 0.3s ease-out;
+    }
+
+    @keyframes pop {
+      0% { transform: scale(0); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+
+    .score-pop {
+      position: absolute;
+      color: #ff4444;
+      font-size: 20px;
+      animation: pop-up 0.5s ease-out;
+    }
+
+    @keyframes pop-up {
+      0% { transform: translateY(0) scale(1); opacity: 1; }
+      100% { transform: translateY(-30px) scale(1.5); opacity: 0; }
+    }
+
+    button {
+      padding: 10px 25px;
+      font-size: 16px;
+      border: none;
+      background-color: #2c71b7;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover:not(:disabled) {
+      background-color: #1565c0;
+    }
+
+    button:disabled {
+      background-color: #90a4ae;
+      cursor: not-allowed;
+    }
+
+    @media (max-width: 400px) {
+      .grid {
+        grid-template-columns: repeat(3, 80px);
+      }
+      .hole {
+        width: 80px;
+        height: 80px;
+      }
+      .mouse {
+        font-size: 50px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🐭 Hit the Mouse!</h1>
+    <div class="scoreboard">
+      <div>Score: <span id="score">0</span></div>
+      <div>Time Left: <span id="time">30</span>s</div>
+      <div>High Score: <span id="highScore">0</span></div>
+    </div>
+
+    <div class="grid">
+      <div class="hole" id="hole0" role="button" tabindex="0"></div>
+      <div class="hole" id="hole1" role="button" tabindex="0"></div>
+      <div class="hole" id="hole2" role="button" tabindex="0"></div>
+      <div class="hole" id="hole3" role="button" tabindex="0"></div>
+      <div class="hole" id="hole4" role="button" tabindex="0"></div>
+      <div class="hole" id="hole5" role="button" tabindex="0"></div>
+      <div class="hole" id="hole6" role="button" tabindex="0"></div>
+      <div class="hole" id="hole7" role="button" tabindex="0"></div>
+      <div class="hole" id="hole8" role="button" tabindex="0"></div>
+    </div>
+
+    <button id="startBtn" onclick="startGame()">Start Game</button>
+  </div>
+
+  <audio id="hitSound" src="https://www.soundjay.com/buttons/beep-01a.mp3"></audio>
+  <audio id="endSound" src="https://www.soundjay.com/human/game-over-01.mp3"></audio>
+
+  <script>
+    const holes = document.querySelectorAll('.hole');
+    const scoreDisplay = document.getElementById('score');
+    const timeDisplay = document.getElementById('time');
+    const startBtn = document.getElementById('startBtn');
+    const highScoreDisplay = document.getElementById('highScore');
+    const hitSound = document.getElementById('hitSound');
+    const endSound = document.getElementById('endSound');
+
+    let score = 0;
+    let timeLeft = 30;
+    let timerInterval, mouseInterval;
+    let isGameRunning = false;
+    let intervalSpeed = 800;
+
+    // Load high score
+    let highScore = localStorage.getItem('highScore') ? parseInt(localStorage.getItem('highScore')) : 0;
+    highScoreDisplay.textContent = highScore;
+
+    function showMouse() {
+      if (!isGameRunning) return;
+      
+      holes.forEach(h => h.innerHTML = '');
+
+      const i = Math.floor(Math.random() * holes.length);
+      const mouse = document.createElement('div');
+      mouse.classList.add('mouse');
+      mouse.innerHTML = '🐭';
+
+      mouse.onclick = () => {
+        if (!isGameRunning) return;
+        score++;
+        scoreDisplay.textContent = score;
+        hitSound.play().catch(error => console.log("Audio play failed:", error)); // Handle play failure
+        mouse.remove();
+        createScorePop(holes[i], `+${1}`);
+        adjustDifficulty();
+      };
+
+      mouse.onkeydown = (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          score++;
+          scoreDisplay.textContent = score;
+          hitSound.play().catch(error => console.log("Audio play failed:", error));
+          mouse.remove();
+          createScorePop(holes[i], `+${1}`);
+          adjustDifficulty();
+        }
+      };
+
+      holes[i].appendChild(mouse);
+      
+      setTimeout(() => {
+        if (mouse.parentNode && isGameRunning) {
+          mouse.remove();
+        }
+      }, 700);
+    }
+
+    function createScorePop(hole, text) {
+      const pop = document.createElement('div');
+      pop.classList.add('score-pop');
+      pop.textContent = text;
+      hole.appendChild(pop);
+      setTimeout(() => pop.remove(), 500);
+    }
+
+    function adjustDifficulty() {
+      if (score > 0 && score % 5 === 0 && intervalSpeed > 400) {
+        intervalSpeed -= 50;
+        clearInterval(mouseInterval);
+        mouseInterval = setInterval(showMouse, intervalSpeed);
+      }
+    }
+
+    function startGame() {
+      if (isGameRunning) return;
+      
+      isGameRunning = true;
+      startBtn.disabled = true;
+      score = 0;
+      timeLeft = 30;
+      intervalSpeed = 800;
+      scoreDisplay.textContent = score;
+      timeDisplay.textContent = timeLeft;
+
+      // Preload audio to ensure it works after user interaction
+      hitSound.load();
+      endSound.load();
+
+      showMouse();
+      mouseInterval = setInterval(showMouse, intervalSpeed);
+
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        timeDisplay.textContent = timeLeft;
+
+        if (timeLeft === 0) {
+          endGame();
+        }
+      }, 1000);
+    }
+
+    function endGame() {
+      isGameRunning = false;
+      clearInterval(timerInterval);
+      clearInterval(mouseInterval);
+      holes.forEach(h => h.innerHTML = '');
+      startBtn.disabled = false;
+      startBtn.textContent = 'Play Again';
+      endSound.play().catch(error => console.log("Audio play failed:", error));
+
+      if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('highScore', highScore);
+        highScoreDisplay.textContent = highScore;
+      }
+      alert(`⏰ Time's up! Your score is ${score}. High Score: ${highScore}`);
+    }
+
+    holes.forEach(hole => {
+      hole.onkeydown = (e) => {
+        if ((e.key === 'Enter' || e.key === ' ') && hole.querySelector('.mouse')) {
+          const mouse = hole.querySelector('.mouse');
+          mouse.click();
+        }
+      };
+    });
+  </script>
+</body>
+</html>
