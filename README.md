@@ -1,7 +1,7 @@
 # 🎯 Hit the Mouse Game 🐭
 
 A fun and interactive browser-based game where you have to **hit the mouse** as it randomly appears in different holes before the timer runs out!
-
+Live Demo- https://supriya01-cpu.github.io/Hit-The-Mouse/
 ---
 
 ## 🧩 Features
